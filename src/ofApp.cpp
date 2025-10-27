@@ -22,6 +22,13 @@ void ofApp::setup(){
         std::make_shared<GameSprite>("title.png", ofGetWindowWidth(), ofGetWindowHeight())
     ));
 
+    // load background music
+    if (!music.load("underwater_theme.wav")) {
+        ofLogError() << "Failed to load underwater_theme.mp3!";
+    } else {
+        music.setLoop(true);
+    }
+
     //AquariumSpriteManager
     spriteManager = std::make_shared<AquariumSpriteManager>();
 
@@ -127,6 +134,9 @@ void ofApp::keyPressed(int key){
         switch (key)
         {
         case ' ':
+            if(!music.isPlaying()){
+                music.play();
+            }
             gameManager->Transition(GameSceneKindToString(GameSceneKind::AQUARIUM_GAME));
             break;
         
