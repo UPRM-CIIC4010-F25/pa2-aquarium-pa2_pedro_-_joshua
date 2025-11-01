@@ -11,8 +11,56 @@ void Creature::normalize() {
     }
 }
 
-void Creature::bounce() {
-    // should implement boundary controls here
+void Creature::bounce(std::shared_ptr<Creature> other) {
+    //bounce off walls
+    if(m_x - m_collisionRadius < 0){
+        m_x = m_collisionRadius;
+        m_dx *= -1;
+        setFlipped(!m_flipped);
+    } else if(m_x + m_collisionRadius > m_width){
+        m_x = m_width - m_collisionRadius;
+        m_dx *= -1;
+        setFlipped(!m_flipped);
+    }
+
+    if(m_y - m_collisionRadius < 0){
+        m_y = m_collisionRadius;
+        m_dy *= -1;;
+    } else if(m_y + m_collisionRadius > m_height){
+        m_y = m_height - m_collisionRadius;
+        m_dy *= -1;
+    }
+
+    //bounce off other creatures
+    if(other){
+        float dxDiff = m_x - other->m_x;
+        float dyDiff = m_y - other->m_y;
+        float distSq = dxDiff * dxDiff + dyDiff * dyDiff;
+        float minDist = m_collisionRadius + other->m_collisionRadius;
+
+        if (distSq < minDist * minDist){
+            float dist = sqrt(distSq);
+            if (dist > 0) {
+                dxDiff /= dist;
+                dyDiff /= dist;
+
+                float overlap = 0.5f * (minDist - dist);
+                m_x += dxDiff * overlap;
+                m_y += dyDiff * overlap;
+                other->m_x -= dxDiff * overlap;
+                other->m_y -= dyDiff * overlap;
+
+                
+                float dotProduct = (m_dx * dxDiff + m_dy * dyDiff);
+                m_dx -= 2 * dotProduct * dxDiff;
+                m_dy -= 2 * dotProduct * dyDiff;
+
+                dotProduct = (other->m_dx * dxDiff + other->m_dy * dyDiff);
+                other->m_dx -= 2 * dotProduct * dxDiff;
+                other->m_dy -= 2 * dotProduct * dyDiff;
+            }
+        }
+    }
 }
 
 
@@ -48,7 +96,11 @@ void GameEvent::print() const {
 
 // collision detection between two creatures
 bool checkCollision(std::shared_ptr<Creature> a, std::shared_ptr<Creature> b) {
-    return false; 
+    ofVec2f posA(a->getX(), a->getY());
+    ofVec2f posB(b->getX(), b->getY());
+    float distance = posA.distance(posB);
+    float collisionDistance = a->getCollisionRadius() + b->getCollisionRadius();
+    return distance < collisionDistance;
 };
 
 
