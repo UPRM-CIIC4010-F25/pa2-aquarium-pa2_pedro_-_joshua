@@ -8,6 +8,12 @@ string AquariumCreatureTypeToString(AquariumCreatureType t){
             return "BiggerFish";
         case AquariumCreatureType::NPCreature:
             return "BaseFish";
+        case AquariumCreatureType::JellyFish:
+            return "JellyFish";
+        case AquariumCreatureType::FastFish:
+            return "FastFish";
+        case AquariumCreatureType::PowerUp:
+            return "PowerUp";
         default:
             return "UknownFish";
     }
@@ -15,7 +21,10 @@ string AquariumCreatureTypeToString(AquariumCreatureType t){
 
 // PlayerCreature Implementation
 PlayerCreature::PlayerCreature(float x, float y, int speed, std::shared_ptr<GameSprite> sprite)
-: Creature(x, y, speed, 10.0f, 1, sprite) {}
+: Creature(x, y, speed, 10.0f, 1, sprite) {
+    m_base_speed = speed;
+}
+
 
 
 void PlayerCreature::setDirection(float dx, float dy) {
@@ -38,6 +47,12 @@ void PlayerCreature::reduceDamageDebounce() {
 
 void PlayerCreature::update() {
     this->reduceDamageDebounce();
+    if(m_speedBoostFrames > 0){
+        --m_speedBoostFrames;
+        if(m_speedBoostFrames == 0){
+            m_speed = m_base_speed;
+        }
+    }
     this->move();
 }
 
@@ -131,11 +146,55 @@ void BiggerFish::draw() const {
     this->m_sprite->draw(this->m_x, this->m_y);
 }
 
+JellyFish::JellyFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite)
+: NPCreature(x, y, std::max(1, speed/2), sprite){
+    m_creatureType = AquariumCreatureType::JellyFish;
+    setCollisionRadius(28);
+    m_value = 2;
+}
+
+void JellyFish::move(){
+    t += 0.05f;
+    m_x += (m_dx == 0 ? 1 : m_dx) * (m_speed * 0.4f);
+    m_y += std::sin(t) * 1.8f;
+    setFlipped(m_dx < 0);
+    bounce();
+}
+
+void JellyFish::draw() const{
+    m_sprite->draw(m_x, m_y);
+}
+
+FastFish::FastFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite )
+:NPCreature(x, y, std::max(speed, 6), sprite){
+    m_creatureType = AquariumCreatureType::FastFish;
+    setCollisionRadius(24);
+    m_value = 3;
+}
+
+void FastFish::move(){
+    ++step;
+    float zig = (step % 30 < 15) ? 1.0f : -1.0f;
+    m_x += (m_dx == 0 ? 1 : m_dx) * (m_speed * 1.2f);
+    m_y += zig * 0.9f;
+    setFlipped(m_dx < 0);
+    bounce();
+}
+
+void FastFish::draw() const{
+    m_sprite->draw(m_x, m_y);
+}
+
 
 // AquariumSpriteManager
 AquariumSpriteManager::AquariumSpriteManager(){
     this->m_npc_fish = std::make_shared<GameSprite>("base-fish.png", 70,70);
     this->m_big_fish = std::make_shared<GameSprite>("bigger-fish.png", 120, 120);
+    this->m_jelly_fish = std::make_shared<GameSprite>("jelly-fish.png", 80, 80);
+    this->m_fast_fish = std::make_shared<GameSprite>("fast-fish.png", 70, 70);
+    this->m_fast_fish = std::make_shared<GameSprite>("power-up.png", 40, 40);
+
+
 }
 
 std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureType t){
@@ -145,6 +204,12 @@ std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureTyp
             
         case AquariumCreatureType::NPCreature:
             return std::make_shared<GameSprite>(*this->m_npc_fish);
+        case AquariumCreatureType::JellyFish:
+            return std::make_shared<GameSprite>(*this->m_jelly_fish);
+        case AquariumCreatureType::FastFish:
+            return std::make_shared<GameSprite>(*this->m_fast_fish);
+        case AquariumCreatureType::PowerUp:
+            return std::make_shared<GameSprite>(*this->m_powerup);
         default:
             return nullptr;
     }
@@ -179,6 +244,14 @@ void Aquarium::update() {
 void Aquarium::draw() const {
     for (const auto& creature : m_creatures) {
         creature->draw();
+    }
+}
+
+void Aquarium::setBounds(int w, int h){
+    m_width = w;
+    m_height = h;
+    for(auto& c : m_creatures){
+        c->setBounds(m_width - 20, m_height - 20);
     }
 }
 
@@ -218,6 +291,21 @@ void Aquarium::SpawnCreature(AquariumCreatureType type) {
             break;
         case AquariumCreatureType::BiggerFish:
             this->addCreature(std::make_shared<BiggerFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::BiggerFish)));
+            break;
+         case AquariumCreatureType::JellyFish:
+            this->addCreature(std::make_shared<JellyFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::JellyFish)));
+            break;
+         case AquariumCreatureType::FastFish:
+            this->addCreature(std::make_shared<FastFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::FastFish)));
+            break;
+         case AquariumCreatureType::PowerUp:
+            {
+                auto p = std::make_shared<NPCreature>(x, y, 2, this->m_sprite_manager->GetSprite(AquariumCreatureType::PowerUp));
+                p->setCollisionRadius(18);
+                *(AquariumCreatureType*)&(p->m_creatureType) = AquariumCreatureType::PowerUp;
+                p->setSpeed(2);
+                this->addCreature(p);
+            }
             break;
         default:
             ofLogError() << "Unknown creature type to spawn!";
@@ -285,6 +373,14 @@ void AquariumGameScene::Update(){
             ofLogVerbose() << "Collision detected between player and NPC!" << std::endl;
             if(event->creatureB != nullptr){
                 event->print();
+                if(auto npc = std::dynamic_pointer_cast<NPCreature>(event->creatureB)){
+                    if(npc->GetType() == AquariumCreatureType::PowerUp){
+                        m_player->applySpeedBoost(3, 6*60);
+                        m_player->increasePower(1);
+                        this->m_aquarium->removeCreature(event->creatureB);
+                        return;
+                    }
+                }
                 if(this->m_player->getPower() < event->creatureB->getValue()){
                     ofLogNotice() << "Player is too weak to eat the creature!" << std::endl;
                     this->m_player->loseLife(3*60); // 3 frames debounce, 3 seconds at 60fps
@@ -379,6 +475,7 @@ std::vector<AquariumCreatureType> Level_0::Repopulate() {
 
 }
 
+
 std::vector<AquariumCreatureType> Level_1::Repopulate() {
     std::vector<AquariumCreatureType> toRepopulate;
     for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
@@ -402,6 +499,20 @@ std::vector<AquariumCreatureType> Level_2::Repopulate() {
                 toRepopulate.push_back(node->creatureType);
             }
             node->currentPopulation += delta;
+        }
+    }
+    return toRepopulate;
+}
+
+std::vector<AquariumCreatureType> Level_3::Repopulate(){
+    std::vector<AquariumCreatureType> toRepopulate;
+    for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
+        int delta = node->population - node->currentPopulation;
+        if(delta > 0){
+            for(int i = 0; i<delta; i++){
+                toRepopulate.push_back(node->creatureType);
+            }
+            node->creaturePopulation += delta;
         }
     }
     return toRepopulate;
