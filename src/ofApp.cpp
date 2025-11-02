@@ -24,10 +24,17 @@ void ofApp::setup(){
 
     // load background music
     if (!music.load("underwater_theme.wav")) {
-        ofLogError() << "Failed to load underwater_theme.mp3!";
+        ofLogError() << "Failed to load underwater_theme.wav!";
     } else {
         music.setLoop(true);
     }
+
+    //load sound effects
+    bounceSound.load("boing-2-44164.wav");
+    munchSound.load("munch-sound-effect.wav");
+
+    bounceSound.setMultiPlay(true);
+    munchSound.setMultiPlay(true);
 
     //AquariumSpriteManager
     spriteManager = std::make_shared<AquariumSpriteManager>();
@@ -73,6 +80,10 @@ void ofApp::update(){
 
     if(gameManager->GetActiveSceneName() == GameSceneKindToString(GameSceneKind::AQUARIUM_GAME)){
         auto gameScene = std::static_pointer_cast<AquariumGameScene>(gameManager->GetActiveScene());
+        //set sound effects
+        gameScene->SetCollisionSound(&bounceSound);
+        gameScene->SetEatSound(&munchSound);
+        gameScene->Update();
         if(gameScene->GetLastEvent() != nullptr && gameScene->GetLastEvent()->isGameOver()){
             gameManager->Transition(GameSceneKindToString(GameSceneKind::GAME_OVER));
             return;

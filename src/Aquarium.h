@@ -177,6 +177,11 @@ class AquariumGameScene : public GameScene {
         : m_player(std::move(player)) , m_aquarium(std::move(aquarium)), m_name(name){}
         std::shared_ptr<GameEvent> GetLastEvent(){return m_lastEvent;}
         void SetLastEvent(std::shared_ptr<GameEvent> event){this->m_lastEvent = event;}
+
+        //Sound effect setters
+        void SetCollisionSound(ofSoundPlayer* sound) {this->collisionSound = sound;}
+        void SetEatSound(ofSoundPlayer* sound) {this->eatSound = sound;}
+
         std::shared_ptr<PlayerCreature> GetPlayer(){return this->m_player;}
         std::shared_ptr<Aquarium> GetAquarium(){return this->m_aquarium;}
         string GetName()override {return this->m_name;}
@@ -189,6 +194,10 @@ class AquariumGameScene : public GameScene {
         std::shared_ptr<GameEvent> m_lastEvent;
         string m_name;
         AwaitFrames updateControl{5};
+        
+        //Sound effects
+        ofSoundPlayer* collisionSound = nullptr;
+        ofSoundPlayer* eatSound = nullptr;
 };
 
 

@@ -53,7 +53,7 @@ private:
 
 class Creature {
 protected:
-    Creature(float x, float y, int speed, float collisionRadius, int value,
+    Creature(float x, float y, int speed, float collisionRadius, int value, bool flipped,
              std::shared_ptr<GameSprite> sprite)
     : m_x(x)
     , m_y(y)
@@ -64,6 +64,7 @@ protected:
     , m_height(0)
     , m_collisionRadius(collisionRadius)
     , m_value(value)
+    , m_flipped(flipped)
     , m_sprite(std::move(sprite)) {}
 
     float m_x = 0.0f;
@@ -75,6 +76,7 @@ protected:
     float m_height = 0.0f;
     float m_collisionRadius = 0.0f;
     int m_value = 0;
+    bool m_flipped = false;
     std::shared_ptr<GameSprite> m_sprite;
 
 public:
@@ -99,7 +101,7 @@ public:
 
     void setBounds(int w, int h);
     void normalize();
-    void bounce();
+    void bounce(std::shared_ptr<Creature> other);
 };
 
 // GameEvents
