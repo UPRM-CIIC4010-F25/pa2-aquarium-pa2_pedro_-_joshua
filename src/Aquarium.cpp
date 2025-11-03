@@ -21,7 +21,7 @@ string AquariumCreatureTypeToString(AquariumCreatureType t){
 
 // PlayerCreature Implementation
 PlayerCreature::PlayerCreature(float x, float y, int speed, std::shared_ptr<GameSprite> sprite)
-: Creature(x, y, speed, 10.0f, 1, sprite) {}
+: Creature(x, y, speed, 10.0f, 1, false, sprite) {}
 
 
 void PlayerCreature::setDirection(float dx, float dy) {
@@ -48,6 +48,7 @@ void PlayerCreature::update() {
         --m_speedBoostFrames;
         if(m_speedBoostFrames == 0){
             m_speed = m_base_speed;
+            m_isBoosted = false;
         }
     }
     this->move();
@@ -154,8 +155,8 @@ void JellyFish::move(){
     t += 0.05f;
     m_x += (m_dx == 0 ? 1 : m_dx) * (m_speed * 0.4f);
     m_y += std::sin(t) * 1.8f;
-    setFlipped(m_dx < 0);
-    bounce();
+    //setFlipped(m_dx < 0);
+    bounce(nullptr);
 }
 
 void JellyFish::draw() const{
@@ -174,8 +175,8 @@ void FastFish::move(){
     float zig = (step % 30 < 15) ? 1.0f : -1.0f;
     m_x += (m_dx == 0 ? 1 : m_dx) * (m_speed * 1.2f);
     m_y += zig * 0.9f;
-    setFlipped(m_dx < 0);
-    bounce();
+    //setFlipped(m_dx < 0);
+    bounce(nullptr);
 }
 
 void FastFish::draw() const{
@@ -280,7 +281,7 @@ std::shared_ptr<Creature> Aquarium::getCreatureAt(int index) {
 void Aquarium::SpawnCreature(AquariumCreatureType type) {
     int x = rand() % this->getWidth();
     int y = rand() % this->getHeight();
-    int speed = 1 + rand() % 25; // Speed between 1 and 25
+    int speed = 1 + rand() % 5; // Speed between 1 and 10
 
     switch (type) {
         case AquariumCreatureType::NPCreature:
@@ -299,7 +300,7 @@ void Aquarium::SpawnCreature(AquariumCreatureType type) {
             {
                 auto p = std::make_shared<NPCreature>(x, y, 2, this->m_sprite_manager->GetSprite(AquariumCreatureType::PowerUp));
                 p->setCollisionRadius(18);
-                *(AquariumCreatureType*)&(p->m_creatureType) = AquariumCreatureType::PowerUp;
+                p->setCreatureType(AquariumCreatureType::PowerUp);
                 p->setSpeed(2);
                 this->addCreature(p);
             }
@@ -356,14 +357,14 @@ std::shared_ptr<GameEvent> DetectAquariumCollisions(std::shared_ptr<Aquarium> aq
         }
     }
 
-    //Cecks NPC vs NPC collisions
+    //Checks NPC vs NPC collisions
     int count = aquarium->getCreatureCount();
     for (int i = 0; i < count; ++i){
         std::shared_ptr<Creature> a = aquarium->getCreatureAt(i);
-        if(!a) continue;
+        if(!a || std::static_pointer_cast<NPCreature>(a)->GetType() == AquariumCreatureType::FastFish) continue;
         for(int j = i + 1; j < count; ++j){
             std::shared_ptr<Creature> b = aquarium->getCreatureAt(j);
-            if(!b) continue;
+            if(!b || std::static_pointer_cast<NPCreature>(b)->GetType() == AquariumCreatureType::FastFish) continue;
             if(checkCollision(a, b)){
                 return std::make_shared<GameEvent>(GameEventType::COLLISION, a, b);
             }
@@ -382,42 +383,48 @@ void AquariumGameScene::Update(){
     if (this->updateControl.tick()) {
         event = DetectAquariumCollisions(this->m_aquarium, this->m_player);
         if (event != nullptr && event->isCollisionEvent()) {
-            ofLogVerbose() << "Collision detected between player and NPC!" << std::endl;
-            if(event->creatureB != nullptr){
-                event->print();
-                if(this->m_player->getPower() < event->creatureB->getValue()){
-                    ofLogNotice() << "Player is too weak to eat the creature!" << std::endl;
-                    this->m_player->loseLife(3*60); // 3 frames debounce, 3 seconds at 60fps
-                    if(this->m_player->getLives() <= 0){
-                        this->m_lastEvent = std::make_shared<GameEvent>(GameEventType::GAME_OVER, this->m_player, nullptr);
-                        return;
+            if(event->creatureA == this->m_player){
+               
+               ofLogVerbose() << "Collision detected between player and NPC!" << std::endl;
+                if(event->creatureB != nullptr){
+                    event->print();
+                    if(std::static_pointer_cast<NPCreature>(event->creatureB)->GetType() == AquariumCreatureType::FastFish){
+                        this->m_player->applySpeedBoost(2, 300);
+                        this->m_aquarium->removeCreature(event->creatureB);
                     }
-                }
-                else{
-                    this->m_aquarium->removeCreature(event->creatureB);
-                    this->m_player->addToScore(1, event->creatureB->getValue());
-                    if (this->m_player->getScore() % 25 == 0){
-                        this->m_player->increasePower(1);
-                        ofLogNotice() << "Player power increased to " << this->m_player->getPower() << "!" << std::endl;
+                    else if(this->m_player->getPower() < event->creatureB->getValue()){
+                        ofLogNotice() << "Player is too weak to eat the creature!" << std::endl;
+                        this->m_player->loseLife(3*60); // 3 frames debounce, 3 seconds at 60fps
+                        if(this->m_player->getLives() <= 0){
+                            this->m_lastEvent = std::make_shared<GameEvent>(GameEventType::GAME_OVER, this->m_player, nullptr);
+                            return;
+                        }
                     }
-                    
+                    else{
+                        if(eatSound) eatSound->play();
+                        this->m_aquarium->removeCreature(event->creatureB);
+                        this->m_player->addToScore(1, event->creatureB->getValue());
+                        if (this->m_player->getScore() % 25 == 0){
+                            this->m_player->increasePower(1);
+                            ofLogNotice() << "Player power increased to " << this->m_player->getPower() << "!" << std::endl;
+                        }
                     }
                 } else {
                     ofLogError() << "Error: creatureB is null in collision event." << std::endl;
-                }
-                //NPC vs NPC collisions
-            } else{
+                } 
+            }else{//NPC vs NPC collisions
                 if(event->creatureA && event->creatureB){
                     if(collisionSound) collisionSound->play();
                     event->creatureA->bounce(event->creatureB);
                 }
-            }
+            }  
+        } 
             
-        }
-        this->m_aquarium->update();
     }
-
+    this->m_aquarium->update();
 }
+
+
 
 void AquariumGameScene::Draw() {
     this->m_player->draw();
@@ -521,7 +528,7 @@ std::vector<AquariumCreatureType> Level_3::Repopulate(){
             for(int i = 0; i<delta; i++){
                 toRepopulate.push_back(node->creatureType);
             }
-            node->creaturePopulation += delta;
+            node->currentPopulation += delta;
         }
     }
     return toRepopulate;
