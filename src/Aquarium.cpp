@@ -155,7 +155,6 @@ void JellyFish::move(){
     t += 0.05f;
     m_x += (m_dx == 0 ? 1 : m_dx) * (m_speed * 0.4f);
     m_y += std::sin(t) * 1.8f;
-    //setFlipped(m_dx < 0);
     bounce(nullptr);
 }
 
@@ -175,7 +174,6 @@ void FastFish::move(){
     float zig = (step % 30 < 15) ? 1.0f : -1.0f;
     m_x += (m_dx == 0 ? 1 : m_dx) * (m_speed * 1.2f);
     m_y += zig * 0.9f;
-    //setFlipped(m_dx < 0);
     bounce(nullptr);
 }
 
@@ -190,7 +188,7 @@ AquariumSpriteManager::AquariumSpriteManager(){
     this->m_big_fish = std::make_shared<GameSprite>("bigger-fish.png", 120, 120);
     this->m_jelly_fish = std::make_shared<GameSprite>("jelly-fish.png", 80, 80);
     this->m_fast_fish = std::make_shared<GameSprite>("fast-fish.png", 70, 70);
-    this->m_fast_fish = std::make_shared<GameSprite>("power-up.png", 40, 40);
+    this->m_powerup = std::make_shared<GameSprite>("power-up.png", 40, 40);
 
 
 }
@@ -361,10 +359,10 @@ std::shared_ptr<GameEvent> DetectAquariumCollisions(std::shared_ptr<Aquarium> aq
     int count = aquarium->getCreatureCount();
     for (int i = 0; i < count; ++i){
         std::shared_ptr<Creature> a = aquarium->getCreatureAt(i);
-        if(!a || std::static_pointer_cast<NPCreature>(a)->GetType() == AquariumCreatureType::FastFish) continue;
+        if(!a || std::static_pointer_cast<NPCreature>(a)->GetType() == AquariumCreatureType::PowerUp) continue;
         for(int j = i + 1; j < count; ++j){
             std::shared_ptr<Creature> b = aquarium->getCreatureAt(j);
-            if(!b || std::static_pointer_cast<NPCreature>(b)->GetType() == AquariumCreatureType::FastFish) continue;
+            if(!b || std::static_pointer_cast<NPCreature>(b)->GetType() == AquariumCreatureType::PowerUp) continue;
             if(checkCollision(a, b)){
                 return std::make_shared<GameEvent>(GameEventType::COLLISION, a, b);
             }
@@ -384,14 +382,15 @@ void AquariumGameScene::Update(){
         event = DetectAquariumCollisions(this->m_aquarium, this->m_player);
         if (event != nullptr && event->isCollisionEvent()) {
             if(event->creatureA == this->m_player){
-               
                ofLogVerbose() << "Collision detected between player and NPC!" << std::endl;
                 if(event->creatureB != nullptr){
                     event->print();
-                    if(std::static_pointer_cast<NPCreature>(event->creatureB)->GetType() == AquariumCreatureType::FastFish){
+                    //Player vs PowerUp collisions
+                    if(std::static_pointer_cast<NPCreature>(event->creatureB)->GetType() == AquariumCreatureType::PowerUp){
                         this->m_player->applySpeedBoost(2, 300);
                         this->m_aquarium->removeCreature(event->creatureB);
                     }
+                    //Player vs NPC collisions
                     else if(this->m_player->getPower() < event->creatureB->getValue()){
                         ofLogNotice() << "Player is too weak to eat the creature!" << std::endl;
                         this->m_player->loseLife(3*60); // 3 frames debounce, 3 seconds at 60fps
@@ -436,9 +435,14 @@ void AquariumGameScene::Draw() {
 
 void AquariumGameScene::paintAquariumHUD(){
     float panelWidth = ofGetWindowWidth() - 150;
+    float panelHeight = ofGetWindowHeight() - 500;
     ofDrawBitmapString("Score: " + std::to_string(this->m_player->getScore()), panelWidth, 20);
     ofDrawBitmapString("Power: " + std::to_string(this->m_player->getPower()), panelWidth, 30);
     ofDrawBitmapString("Lives: " + std::to_string(this->m_player->getLives()), panelWidth, 40);
+    if(this->m_player->isBoostActive()){
+        ofSetColor(ofColor::lightGreen);
+        ofDrawBitmapString("YOU HAVE 2X SPEED!", ofGetWindowWidth()/2 - 75, panelHeight);
+    }
     for (int i = 0; i < this->m_player->getLives(); ++i) {
         ofSetColor(ofColor::red);
         ofDrawCircle(panelWidth + i * 20, 50, 5);

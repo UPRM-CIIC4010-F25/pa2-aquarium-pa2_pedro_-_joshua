@@ -65,6 +65,7 @@ public:
     int getScore()const { return m_score; }
     int getLives() const { return m_lives; }
     int getPower() const { return m_power; }
+    bool isBoostActive() const {return m_isBoosted;}
     
     void addToScore(int amount, int weight=1) { m_score += amount * weight; }
     void loseLife(int debounce);
@@ -74,9 +75,9 @@ public:
     //powerup
     void applySpeedBoost(int amount, int durationFrames){
         if(!m_isBoosted){
-            this->m_speedBoostFrames = std::max(m_speedBoostFrames, durationFrames);
-            this->m_base_speed = this->m_speed;
-            this->m_speed *= amount;
+            m_speedBoostFrames = std::max(m_speedBoostFrames, durationFrames);
+            m_base_speed = this->m_speed;
+            m_speed *= amount;
             m_isBoosted = true;
         }
         
@@ -234,8 +235,9 @@ class Level_2 : public AquariumLevel  {
         Level_2(int levelNumber, int targetScore): AquariumLevel(levelNumber, targetScore){
            
             this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::NPCreature, 7));
-            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::BiggerFish, 6));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::BiggerFish, 3));
             this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::FastFish, 1));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::PowerUp, 2));
 
         };
         std::vector<AquariumCreatureType> Repopulate() override;
@@ -249,7 +251,7 @@ class Level_3 : public AquariumLevel{
             this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::BiggerFish, 2));
             this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::FastFish, 3));
             this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::JellyFish, 4));
-            //this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::PowerUp, 2));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::PowerUp, 2));
 
         };
         std::vector<AquariumCreatureType> Repopulate() override;
