@@ -174,6 +174,11 @@ void FastFish::move(){
     float zig = (step % 30 < 15) ? 1.0f : -1.0f;
     m_x += (m_dx == 0 ? 1 : m_dx) * (m_speed * 1.2f);
     m_y += zig * 0.9f;
+    if(m_dx < 0 ){
+        this->m_sprite->setFlipped(false);
+    }else {
+        this->m_sprite->setFlipped(true);
+    }
     bounce(nullptr);
 }
 
