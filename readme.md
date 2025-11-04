@@ -24,8 +24,8 @@ Grading
 ## Team Info
 | Student Number | Student Name | Student Email |
 |-|-|-|
-|(STUDENT NUMBER HERE)| (STUDENT NAME HERE)| (STUDENT EMAIL HERE) |
-|(STUDENT NUMBER HERE)| (STUDENT NAME HERE)| (STUDENT EMAIL HERE) |
+| 802-23-1996 | Joshua N. Román Cabrera | joshua.roman4@upr.edu |
+| 802-23-1910 | Pedro Rivera Rodríguez | pedro.rivera99@upr.edu |
 
 ---
 
